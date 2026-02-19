@@ -1,0 +1,18 @@
+2026-02-19 00:18:00,447 - train_log - INFO - unlearn_epoch 5, unlearn_rate 0.001
+2026-02-19 00:18:00,447 - train_log - INFO - eval option {'train_forget': True, 'train_remain': True, 'test_forget': True, 'test_remain': True}
+2026-02-19 00:18:00,447 - train_log - INFO - soft_label method: inf
+2026-02-19 00:18:01,487 - train_log - INFO - epoch 1 loss 0.7494
+2026-02-19 00:18:06,083 - train_log - INFO - train_forget_acc: 0.00%, train_remain_acc: 95.45%, test_forget_acc: 0.00%, test_remain_acc: 97.76%
+2026-02-19 00:18:06,906 - train_log - INFO - epoch 2 loss 0.2880
+2026-02-19 00:18:11,443 - train_log - INFO - train_forget_acc: 0.00%, train_remain_acc: 96.99%, test_forget_acc: 0.00%, test_remain_acc: 98.93%
+2026-02-19 00:18:12,280 - train_log - INFO - epoch 3 loss 0.3624
+2026-02-19 00:18:16,765 - train_log - INFO - train_forget_acc: 0.00%, train_remain_acc: 97.29%, test_forget_acc: 0.00%, test_remain_acc: 99.11%
+2026-02-19 00:18:17,536 - train_log - INFO - epoch 4 loss 0.2570
+2026-02-19 00:18:22,108 - train_log - INFO - train_forget_acc: 0.00%, train_remain_acc: 97.45%, test_forget_acc: 0.00%, test_remain_acc: 99.25%
+2026-02-19 00:18:22,933 - train_log - INFO - epoch 5 loss 0.0545
+2026-02-19 00:18:27,438 - train_log - INFO - train_forget_acc: 0.00%, train_remain_acc: 97.30%, test_forget_acc: 0.00%, test_remain_acc: 99.14%
+2026-02-19 00:18:28,201 - train_log - INFO - Model saved to experiments/mnist_resnet18_forget9/delete/_0219-00:18:00/ckpt.pth
+2026-02-19 00:18:28,201 - train_log - INFO - Starting MIA evaluation
+2026-02-19 00:18:48,628 - train_log - INFO - Unlearn model MIA result:
+SVC_MIA_Accuracy: 1.0000
+2026-02-19 00:18:48,628 - train_log - INFO - Execution completed
