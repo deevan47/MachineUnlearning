@@ -5,7 +5,6 @@ def setup_logger(log_dir, logger_name='train_log'):
     logger = logging.getLogger(logger_name)
     logger.setLevel(logging.INFO)
     
-    # Create log directory if it doesn't exist
     import os
     os.makedirs(log_dir, exist_ok=True)
     

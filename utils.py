@@ -14,11 +14,11 @@ from pathlib import Path
 
 
 def note_print(*args, **kwargs):
-    """Print in red color for visibility"""
+    """Print text in red."""
     print('\033[91m' + " ".join(map(str, args)) + '\033[0m', **kwargs)
 
 def timer(func):
-    """Decorator to measure function execution time"""
+    """Measure execution time."""
     @wraps(func)
     def wrapper(*args, **kwargs):
         start_time = time.time()
@@ -30,7 +30,7 @@ def timer(func):
     return wrapper
 
 def seed_torch(seed=2022):
-    """Set random seeds for reproducibility"""
+    """Set random seed."""
     random.seed(seed)
     os.environ['PYTHONHASHSEED'] = str(seed)
     np.random.seed(seed)
@@ -41,10 +41,10 @@ def seed_torch(seed=2022):
     torch.backends.cudnn.benchmark = False
 
 def create_dir(dir_name):
-    """Create directory if it doesn't exist"""
+    """Create directory if missing."""
     if not os.path.exists(dir_name):
         os.makedirs(dir_name)
-        print(f"Created directory: {dir_name}")
+        print(f"Created {dir_name}")
 
 class Identity:
     """Identity transformation (no augmentation)"""
@@ -54,9 +54,9 @@ class Identity:
         return self.__class__.__name__ + '()'
 
 def get_transforms(dataset_name, model_name, wo_dataaug=False):
-    """Get data augmentation transforms for MNIST"""
+    """Return transforms."""
     if dataset_name == "mnist":
-        # MNIST specific transforms
+        # MNIST 
         if wo_dataaug:
             transform_train = transforms.Compose([
                 transforms.ToTensor(),
@@ -73,26 +73,55 @@ def get_transforms(dataset_name, model_name, wo_dataaug=False):
             transforms.ToTensor(),
             transforms.Normalize((0.1307,), (0.3081,))
         ])
+    elif dataset_name == "cifar10":
+        # CIFAR-10 
+        resize_transform = transforms.Identity() if "my" in model_name or model_name == "vgg16" \
+                        else transforms.Resize((224, 224))
+        if wo_dataaug:
+            transform_train = transforms.Compose([
+                resize_transform,
+                transforms.ToTensor(),
+                transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2470, 0.2435, 0.2616)),
+            ])
+        else:
+            transform_train = transforms.Compose([
+                transforms.RandomHorizontalFlip(),
+                transforms.RandomCrop(32, padding=4),
+                resize_transform,
+                transforms.ToTensor(),
+                transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2470, 0.2435, 0.2616)),
+            ])
+        
+        transform_test = transforms.Compose([
+            resize_transform,
+            transforms.ToTensor(),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2470, 0.2435, 0.2616)),
+        ])
     else:
-        raise ValueError(f"Dataset {dataset_name} not supported for MNIST-only version")
+        raise ValueError(f"Dataset {dataset_name} not supported")
     
     return transform_train, transform_test
 
 def get_dataset(dataset_name, transform_train, transform_test, 
                 path=Path("~/data").expanduser()):
-    """Load MNIST dataset"""
+    """Load dataset"""
     if dataset_name == "mnist":
         trainset = datasets.MNIST(str(path), train=True, download=True,
                                  transform=transform_train)
         testset = datasets.MNIST(str(path), train=False, download=True,
                                 transform=transform_test)
+    elif dataset_name == "cifar10":
+        trainset = datasets.CIFAR10(str(path), train=True, download=True,
+                               transform=transform_train)
+        testset = datasets.CIFAR10(str(path), train=False, download=True,
+                              transform=transform_test)
     else:
         raise ValueError(f"Dataset {dataset_name} not supported")
     
     return trainset, testset
 
 def get_dataloader(trainset, testset, batch_size, num_workers, shuffle=True):
-    """Create DataLoaders for training and testing"""
+    """Create DataLoaders"""
     train_loader = DataLoader(trainset, batch_size=batch_size,
                              shuffle=shuffle, num_workers=num_workers)
     test_loader = DataLoader(testset, batch_size=batch_size,
@@ -101,34 +130,26 @@ def get_dataloader(trainset, testset, batch_size, num_workers, shuffle=True):
 
 def split_class_data(dataset, forget_class_index, num_forget):
     """
-    Split dataset into forget and remain indices based on class
-    
-    Args:
-        dataset: PyTorch dataset
-        forget_class_index: List of class indices to forget
-        num_forget: Number of forget samples to extract
-    
-    Returns:
-        train_forget_index, train_remain_index, class_remain_index
+    Split dataset into forget/remain indices
     """
     targets = np.array(dataset.targets)
     
-    # Find all indices for forget classes
+    # Find indices
     forget_mask = np.isin(targets, forget_class_index)
     forget_class_indices = np.where(forget_mask)[0].tolist()
     
-    # Find all indices for remain classes
+    # remain indices
     remain_mask = ~forget_mask
     remain_class_indices = np.where(remain_mask)[0].tolist()
     
-    # Sample num_forget indices from forget class
+    # leftover forget indices
     train_forget_index = random.sample(forget_class_indices, 
                                        min(num_forget, len(forget_class_indices)))
     
     # Remaining forget indices (for constructing remain set)
     class_remain_index = [i for i in forget_class_indices if i not in train_forget_index]
     
-    # Train remain = all remain class + leftover forget class
+    # final remain set
     train_remain_index = remain_class_indices + class_remain_index
     
     return train_forget_index, train_remain_index, class_remain_index
@@ -136,11 +157,7 @@ def split_class_data(dataset, forget_class_index, num_forget):
 def get_unlearn_loader(trainset, testset, forget_class_index, batch_size,
                        num_forget, num_workers, repair_num_ratio=0.01):
     """
-    Create data loaders for unlearning task
-    
-    Returns:
-        train_forget_loader, train_remain_loader, test_forget_loader,
-        test_remain_loader, repair_class_loader, and all indices
+Create loaders for unlearning
     """
     train_forget_index, train_remain_index, class_remain_index = \
         split_class_data(trainset, forget_class_index, num_forget=num_forget)
@@ -148,18 +165,18 @@ def get_unlearn_loader(trainset, testset, forget_class_index, batch_size,
     test_forget_index, test_remain_index, _ = \
         split_class_data(testset, forget_class_index, num_forget=len(testset))
     
-    # Sample repair class (for some methods)
+    # repair subset
     repair_class_index = random.sample(class_remain_index,
                                        int(repair_num_ratio * len(class_remain_index)))
     
-    # Create samplers
+    #  samplers
     train_forget_sampler = SubsetRandomSampler(train_forget_index)
     train_remain_sampler = SubsetRandomSampler(train_remain_index)
     repair_class_sampler = SubsetRandomSampler(repair_class_index)
     test_forget_sampler = SubsetRandomSampler(test_forget_index)
     test_remain_sampler = SubsetRandomSampler(test_remain_index)
     
-    # Create loaders
+    #  loaders
     train_forget_loader = DataLoader(trainset, batch_size=batch_size,
                                     sampler=train_forget_sampler,
                                     num_workers=num_workers)
@@ -181,7 +198,7 @@ def get_unlearn_loader(trainset, testset, forget_class_index, batch_size,
             train_remain_index, test_forget_index, test_remain_index)
 
 def inf_generator(iterable):
-    """Create infinite iterator from iterable"""
+    """Infinite iterator"""
     while True:
         for item in iterable:
             yield item

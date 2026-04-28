@@ -20,12 +20,22 @@ def evaluate_model_on_all_loaders(model, loader_dict, eval_option, logger,
         if eval_option[key]:
             _, acc = test(model, loader_dict[key], extra_class)
             current_accs_dict[key] = acc
-    
-    logger.info(f"train_forget_acc: {current_accs_dict['train_forget']:.2%}, "
-               f"train_remain_acc: {current_accs_dict['train_remain']:.2%}, "
-               f"test_forget_acc: {current_accs_dict['test_forget']:.2%}, "
-               f"test_remain_acc: {current_accs_dict['test_remain']:.2%}")
-    
+
+    def fmt(x):
+        try:
+            if x != x:  # nan check
+                return 'N/A'
+            return f"{x*100:.2f}%"
+        except Exception:
+            return 'N/A'
+
+    logger.info(
+        f"train_forget_acc: {fmt(current_accs_dict['train_forget'])}, "
+        f"train_remain_acc: {fmt(current_accs_dict['train_remain'])}, "
+        f"test_forget_acc: {fmt(current_accs_dict['test_forget'])}, "
+        f"test_remain_acc: {fmt(current_accs_dict['test_remain'])}"
+    )
+
     return current_accs_dict
 
 def plot_unlearn_remain_acc_figure(epoch, accs_dict, experiment_path,

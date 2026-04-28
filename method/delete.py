@@ -6,7 +6,6 @@ import tqdm
 import time
 from functools import wraps
 
-# USE ABSOLUTE IMPORTS
 from method.utils import keys, eval_opt, evaluate_model_on_all_loaders
 import log_utils
 

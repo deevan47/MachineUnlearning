@@ -50,7 +50,7 @@ class BasicBlock(nn.Module):
 class ResNet(nn.Module):
     """ResNet architecture"""
     
-    def __init__(self, block, layers, num_classes=1000, zero_init_residual=False,
+    def __init__(self, block, layers, num_classes=1000, in_channels=1, zero_init_residual=False,
                  groups=1, width_per_group=64, replace_stride_with_dilation=None,
                  norm_layer=None):
         super(ResNet, self).__init__()
@@ -68,8 +68,8 @@ class ResNet(nn.Module):
         self.groups = groups
         self.base_width = width_per_group
         
-        # For MNIST: initial conv with smaller kernel
-        self.conv1 = nn.Conv2d(1, self.inplanes, kernel_size=7, stride=2,
+        # Initial conv layer - adaptable to different input channels
+        self.conv1 = nn.Conv2d(in_channels, self.inplanes, kernel_size=7, stride=2,
                               padding=3, bias=False)
         self.bn1 = norm_layer(self.inplanes)
         self.relu = nn.ReLU(inplace=True)
@@ -144,6 +144,6 @@ class ResNet(nn.Module):
         
         return x
 
-def resnet18(num_classes=10, **kwargs):
+def resnet18(num_classes=10, in_channels=1, **kwargs):
     """ResNet-18 model"""
-    return ResNet(BasicBlock, [2, 2, 2, 2], num_classes=num_classes, **kwargs)
+    return ResNet(BasicBlock, [2, 2, 2, 2], num_classes=num_classes, in_channels=in_channels, **kwargs)

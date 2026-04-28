@@ -3,18 +3,18 @@ import torch.nn as nn
 from pathlib import Path
 from .resnet import resnet18
 
-def get_model(model_name, num_classes):
+def get_model(model_name, num_classes, in_channels=1):
     """Get model by name"""
     if model_name == 'resnet18':
-        model = resnet18(num_classes=num_classes)
+        model = resnet18(num_classes=num_classes, in_channels=in_channels)
     else:
-        raise ValueError(f"Model {model_name} not supported for MNIST")
+        raise ValueError(f"Model {model_name} not supported")
     
     return model
 
-def load_model(model_path, model_name, num_classes):
+def load_model(model_path, model_name, num_classes, in_channels=1):
     """Load pre-trained model"""
-    model = get_model(model_name, num_classes)
+    model = get_model(model_name, num_classes, in_channels)
     
     model_path = Path(model_path)
     if model_path.exists():

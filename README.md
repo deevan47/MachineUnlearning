@@ -1,118 +1,171 @@
-# Machine Unlearning on MNIST - DELETE Algorithm
+# ERASE - Efficient Removal of Acquired Selective Experience
 
-## What's This All About?
+This project implements the ERASE algorithm for machine unlearning, enabling selective removal of specific classes from trained neural networks without full retraining. It applies the DELETE method to ResNet-18 models on MNIST and CIFAR-10 datasets, demonstrating effective unlearning of targeted categories while preserving performance on retained classes.
 
-Hey there! So you know how we train AI models on tons of data, and they learn to recognize patterns? Well, what if later we decide we want the model to "forget" some of that data? Maybe it's private information, or maybe we realized some of our training data was problematic.
+## Project Structure
 
-That's exactly what this project does - we take a model that recognizes handwritten digits (MNIST) and make it forget how to recognize a specific digit, say the number "0". And we do this without retraining the whole model from scratch.
+```
+minst/
+├── main.py                 # Interactive main script for dataset selection and unlearning
+├── trainer.py              # Model training, testing, and checkpoint management
+├── utils.py                # Data preprocessing, seeding, and utility functions
+├── config/
+│   ├── mnist_resnet18.yaml     # MNIST experiment configuration
+│   └── cifar10_resnet18.yaml   # CIFAR-10 experiment configuration
+├── data/                   # Automatic dataset downloads (MNIST/CIFAR-10)
+├── evaluation/             # Evaluation and attack implementations
+│   ├── MIA.py                  # Membership inference attack
+│   ├── SVC_MIA.py              # SVM-based MIA evaluation
+│   ├── advanced_metrics.py     # t-SNE visualization and confusion matrices
+│   └── __init__.py
+├── experiments/            # Output directory for models and results
+│   ├── pretrained_model/       # Pre-trained and unlearned model checkpoints
+│   └── [experiment_name]/      # Individual experiment directories
+├── method/                 # Unlearning algorithm implementations
+│   ├── delete.py               # Core DELETE algorithm
+│   ├── finetune.py             # Fine-tuning baseline method
+│   ├── gradient_ascent.py      # Gradient ascent baseline
+│   ├── boundary_shrink.py      # Boundary shrink baseline
+│   ├── random_label.py         # Random label baseline
+│   ├── _adv_generator.py       # Adversarial example utilities
+│   └── utils.py                # Method evaluation utilities
+└── models/
+    ├── resnet.py               # ResNet-18 architecture
+    └── __init__.py
+```
 
-----------
+## Tech Stack and Dependencies
 
-## How It Actually Works
+- **Python** 3.7+
+- **PyTorch** 1.7+ (neural network framework)
+- **Torchvision** (dataset handling and transforms)
+- **NumPy** (numerical operations)
+- **Matplotlib** (plotting utilities)
+- **OmegaConf** (YAML configuration loading)
+- **tqdm** (progress indicators)
+- **scikit-learn** (SVM for MIA)
+- **seaborn** (enhanced plotting)
 
-### The Setup
+## Setup and Installation
 
-Imagine you've taught a kid to recognize all numbers from 0 to 9. They're pretty good at it. Now you want them to forget what the number 0 looks like, but still remember all other numbers perfectly. That's our task.
+1. Ensure Python 3.7+ is installed.
 
-### Step 1: Training the "Smart" Model
+2. Create and activate a virtual environment:
+   ```
+   python -m venv venv
+   source venv/bin/activate  # Linux/Mac
+   # or
+   venv\Scripts\activate     # Windows
+   ```
 
-First, we train a neural network (specifically ResNet18) on MNIST. It learns all the little details:
+3. Install required packages:
+   ```
+   pip install torch torchvision numpy matplotlib omegaconf tqdm scikit-learn seaborn
+   ```
 
--   The loopiness of an '8'
-    
--   The straight line of a '1'
-    
--   The curve of a '2'
-    
+4. Verify CUDA availability for GPU acceleration (optional but recommended).
 
-After training, it can look at any handwritten digit and tell you what it is with about 99% accuracy.
+## How It Works
 
-### Step 2: The "Forgetting" Process
+The ERASE system provides an interactive pipeline for machine unlearning:
 
-This is where the magic happens. When we decide to forget, say, the digit '0', here's what the algorithm does:
+1. **Dataset Selection**: Choose between MNIST or CIFAR-10 datasets.
 
-#### It plays two different games at once:
+2. **Model Loading**: Load a pre-trained ResNet-18 model (optionally with existing forgotten classes).
 
--   **For the digits we want to keep** (1-9): It gently reinforces what the model already knows, like a quick review session
-    
--   **For the digit we want to forget** (0): It actively messes with the model's understanding. It shows the model pictures of zeros and goes "Nope, that's definitely NOT a zero" over and over until the model gets confused and forgets what zeros look like
-    
+3. **Class Selection**: Specify which classes to unlearn from the available unforgotten classes.
 
-----------
+4. **Unlearning Execution**: Apply the DELETE algorithm:
+   - Generate soft targets using the original model's predictions
+   - Set logits for forgotten classes to negative infinity
+   - Optimize using KL divergence loss to match modified targets
+   - Monitor accuracy on retained classes during training
 
-## What's Happening Inside the Model?
+5. **Evaluation**: Generate comprehensive metrics:
+   - Before/after accuracy comparison plots
+   - t-SNE visualizations of feature space changes
+   - Confusion matrices for forgotten class analysis
+   - Membership inference attack (MIA) using SVM to verify unlearning effectiveness
 
-Think of the model like a huge web of connections. Each connection has a "strength" - some get stronger when the model learns something.
+## Dataset
 
-When the model learned digits:
+Supports two standard vision datasets, downloaded automatically:
 
--   Certain connections got stronger for recognizing zeros
-    
--   Different connections lit up for ones, twos, etc.
-    
+- **MNIST**: 70,000 handwritten digit images (60k train, 10k test), 28×28 grayscale, 10 classes
+- **CIFAR-10**: 60,000 object images (50k train, 10k test), 32×32 RGB, 10 classes
 
-When we make it forget:
+Data partitioning occurs dynamically based on selected forget classes.
 
--   We specifically target and weaken the connections that were responsible for recognizing zeros
-    
--   We leave the other connections mostly alone
-    
--   It's like carefully erasing specific strands of a spider web while leaving the rest intact
-    
+## Results or Output
 
-----------
+Execution produces:
 
-## The Tricky Part
+- **Model Checkpoints**: Saved unlearned models in `.pth` format with metadata
+- **Accuracy Reports**: Per-class accuracy tables before and after unlearning
+- **Visualization Plots**: 
+  - Accuracy comparison bar charts
+  - t-SNE embeddings showing feature space changes
+  - Confusion matrices for detailed classification analysis
+- **MIA Results**: SVM-based attack accuracy indicating unlearning success
+- **Experiment Logs**: Timestamped directories containing all outputs
 
-The challenge is that these connections aren't neatly organized. The same neurons that help recognize zeros might also help with eights (since both have loops). So when we weaken zero-recognizing connections, we have to be super careful not to accidentally mess up the model's ability to recognize eights.
+## Known Limitations or Notes
 
-The DELETE algorithm handles this by:
+- Interactive execution requires manual input for dataset and class selection
+- Pre-trained models may already have some classes forgotten
+- Unlearning multiple classes simultaneously may affect retained class accuracy
+- DELETE algorithm parameters are fixed; no hyperparameter tuning implemented
+- Evaluation metrics focus on classification accuracy and MIA; no robustness testing
+- GPU required for reasonable execution times on full datasets
+- Console output with detailed accuracy tables and evaluation metrics
+- Experiment results saved in timestamped directories under `experiments/`
 
--   Making very small, precise adjustments
-    
--   Constantly checking that it's not breaking other digits
-    
--   Using some clever math to target only the "zero-specific" patterns
-    
+## Known Limitations or Notes
 
-----------
+- Currently implements only the DELETE algorithm; other methods are present but not fully integrated
+- Unlearning may cause minor accuracy degradation (1-2%) on retained classes
+- Requires GPU for reasonable training times; CPU training is possible but slow
+- Membership inference attack evaluation uses shadow models for attack training
+- Configuration is hardcoded for ResNet-18 architecture only
+- No hyperparameter optimization implemented; uses fixed values from config files
 
-## How We Know It Actually Worked
+## How to Actually Run This
 
-After the forgetting process, we run two checks:
+### 1. Train from the beginning:
 
-### 1. The Obvious Check
+```bash
+python main.py --train_from_scratch
+```
 
-We show it pictures of zeros. If it can't recognize them anymore (accuracy drops to near 0%), we're on the right track.
+This trains a fresh ResNet18 on all digits 0-9. Takes a while. Saves checkpoints for each epoch under `experiments/pretrained_model/`.
 
-### 2. The Sneaky Check (MIA)
+### 2. Run the actual unlearning:
 
-We run something called a Membership Inference Attack. This tries to figure out if the model was trained on certain data. If the attack succeeds perfectly, that actually means the forgetting worked - because the forgotten data now looks completely foreign to the model.
+```bash
+python main.py
+```
 
-----------
+After this runs, you'll get prompted to enter which digits you want to forget. Like if you type `123`, the model will forget digits 1, 2, and 3. You can use formats like:
+- `123` (compact)
+- `1, 2, 3` (with spaces/commas)
+- basically anything, the script splits it into individual digits
 
-## Why Is This Useful?
+**Cool feature:** If you already unlearned `123` once, and you run this again and say `123`, it loads the ALREADY-unlearned model instead of starting over. So it remembers the forget state.
 
--   **Privacy stuff**: If someone asks a company to delete their data, the company might need to "unlearn" it from their AI models
-    
--   **Fixing mistakes**: Realized some of your training data was wrong or biased? Just unlearn it
-    
--   **Saving time**: Retraining a massive model from scratch takes forever and costs a ton of money. Unlearning takes minutes
-    
+If you want to unlearn `456` after that, it starts from the original model (if `456` wasn't unlearned before) OR from the saved `456` model (if it was).
 
-----------
+### 3. What Gets Saved
 
-## Real Talk: Limitations
+- Each run creates a folder with a timestamp under `experiments/`
+- The unlearned model also gets saved to `experiments/pretrained_model/mnist_resnet18_forget<digits>_unlearned.pth`
+- This lets you reload the same forgotten model later without redoing the work
 
--   It works great for forgetting entire categories (like all zeros), but gets trickier if you want to forget specific individual images
-    
--   Sometimes other digits take a tiny hit in accuracy (usually less than 1-2%)
-    
--   Different types of models might need slightly different approaches
-    
+### 4. Reset Everything
 
-----------
+If you want a fresh start and clear all the unlearned models:
 
-## The Bottom Line
+```bash
+python main.py --train_from_scratch
+```
 
-Machine unlearning is like having a delete button for your AI's memories. This project shows it's possible to make a model forget entire classes of data efficiently, opening up possibilities for more responsible AI that can adapt to privacy requirements and correct its own training mistakes.
+This trains a brand new original model and wipes out all previous forget states. Next time you run the interactive part, it's like starting fresh.

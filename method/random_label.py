@@ -7,7 +7,6 @@ import random
 import time
 from functools import wraps
 
-# USE ABSOLUTE IMPORTS - Not relative
 from utils import note_print
 from method.utils import keys, eval_opt, evaluate_model_on_all_loaders
 import log_utils
